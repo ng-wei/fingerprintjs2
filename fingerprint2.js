@@ -24,6 +24,15 @@
   else { context[name] = definition(); }
 })("Fingerprint2", this, function() {
   "use strict";
+
+  ///////////
+  // Helper
+  ///////////
+  var util = {
+
+  }
+
+
   var Fingerprint2 = function(options) {
 
     if (!(this instanceof Fingerprint2)) {
@@ -71,6 +80,7 @@
       keys = this.doNotTrackKey(keys);
       keys = this.pluginsKey(keys);
       keys = this.canvasKey(keys);
+      keys = this.canvasHashKey(keys);
       keys = this.webglKey(keys);
       keys = this.adBlockKey(keys);
       keys = this.hasLiedLanguagesKey(keys);
@@ -83,12 +93,19 @@
       this.fontsKey(keys, function(newKeys){
         var values = [];
         that.each(newKeys, function(pair) {
-          var value = pair.value;
+          var key = pair.key;
+          if (key === 'user_agent') {
+            value = pair.value.replace(/NetType\/\w+/, '');
+          } else {
+            value = pair.value;
+          }
+
           if (typeof pair.value.join !== "undefined") {
             value = pair.value.join(";");
           }
           values.push(value);
         });
+        console.log(values.join("~~"));
         var murmur = that.x64hash128(values.join("~~~"), 31);
         return done(murmur, newKeys);
       });
@@ -227,6 +244,12 @@
     canvasKey: function(keys) {
       if(!this.options.excludeCanvas && this.isCanvasSupported()) {
         keys.push({key: "canvas", value: this.getCanvasFp()});
+      }
+      return keys;
+    },
+    canvasHashKey: function(keys) {
+      if(!this.options.excludeCanvasHash && this.isCanvasSupported()) {
+        keys.push({key: "canvas_hash", value: this.getCanvasHash()});
       }
       return keys;
     },
@@ -648,6 +671,12 @@
       return [maxTouchPoints, touchEvent, touchStart];
     },
     // https://www.browserleaks.com/canvas#how-does-it-work
+    getCanvasHash: function() {
+      var canvasFp = this.getCanvasFp();
+      var value = that.x64hash128(canvasFp, 31);
+      console.log("canvas hash " + value);
+      return value;
+    },
     getCanvasFp: function() {
       var result = [];
       // Very simple now, need to make it more complex (geo shapes etc)
